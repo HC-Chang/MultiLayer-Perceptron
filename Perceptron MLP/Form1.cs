@@ -63,7 +63,7 @@ namespace Perceptron_MLP
             textBox4.Clear();
             textBox5.Clear();
 
-           
+
             //////////////////////////////
             ////////start learning////////
             //////////////////////////////
@@ -106,19 +106,19 @@ namespace Perceptron_MLP
             chart2.Series[0].Points.Clear();
             chart2.Series[1].Points.Clear();
 
-            chart2.ChartAreas[0].AxisY.Maximum = (int)Math.Max((gtrth_pts_norm.Max()*sample_pts_num + 1), (outpred_pts.Max()*sample_pts_num + 1));
-            chart2.ChartAreas[0].AxisY.Minimum = (int)Math.Min((gtrth_pts_norm.Min()*sample_pts_num - 1), (outpred_pts.Min()*sample_pts_num - 1));
+            chart2.ChartAreas[0].AxisY.Maximum = (int)Math.Max((gtrth_pts_norm.Max() * sample_pts_num + 1), (outpred_pts.Max() * sample_pts_num + 1));
+            chart2.ChartAreas[0].AxisY.Minimum = (int)Math.Min((gtrth_pts_norm.Min() * sample_pts_num - 1), (outpred_pts.Min() * sample_pts_num - 1));
 
             chart2.ChartAreas[0].RecalculateAxesScale();
 
             for (int data_pts_idx = 0; data_pts_idx < sample_pts_num; data_pts_idx++) //plot ground truth data points
             {
-                chart2.Series[0].Points.AddXY(data_pts_idx, (gtrth_pts_norm[data_pts_idx]*sample_pts_num));
+                chart2.Series[0].Points.AddXY(data_pts_idx, (gtrth_pts_norm[data_pts_idx] * sample_pts_num));
             }
 
             for (int data_pts_idx = 0; data_pts_idx < sample_pts_num; data_pts_idx++) //plot output predic data line
             {
-                chart2.Series[1].Points.AddXY(data_pts_idx, (outpred_pts[data_pts_idx]*sample_pts_num));
+                chart2.Series[1].Points.AddXY(data_pts_idx, (outpred_pts[data_pts_idx] * sample_pts_num));
             }
 
 
@@ -164,33 +164,54 @@ namespace Perceptron_MLP
             /////////////////////////////////////////////////////////////
             ////////throw error when textbox text is empty string////////
             /////////////////////////////////////////////////////////////
+
+            int err_code = 0;
+            string err_str = "";
             if (textBox1.Text == string.Empty)
             {
-                MessageBox.Show("Please input the number of input node", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                return;
+                err_code = -1;
+                err_str += "Please input the number of input node\r\n";
             }
             if (textBox2.Text == string.Empty)
             {
-                MessageBox.Show("Please input the number of hidden node", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                return;
+                err_code -= 2;
+                err_str += "Please input the number of hidden node\r\n";
             }
             if (textBox3.Text == string.Empty)
             {
-                MessageBox.Show("Please input the learning rate value", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                return;
+                err_code -= 4;
+                err_str += "Please input the learning rate value\r\n";
             }
 
+            if (err_code < 0)
+            {
+                MessageBox.Show(err_str.TrimEnd('\r', '\n'), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             //////////////////////////////////////////////
             ////////initialized related parameters////////
             //////////////////////////////////////////////
             /* values & data query from input textbox */
-            sample_pts_num = int.Parse(textBox1.Text);
-            hiddn_nde_num = int.Parse(textBox2.Text);
-            learning_rate = double.Parse(textBox3.Text);
+            // sample_pts_num = int.Parse(textBox1.Text);
+            // hiddn_nde_num = int.Parse(textBox2.Text);
+            // learning_rate = double.Parse(textBox3.Text);
+            bool text_result;
+            text_result = int.TryParse(textBox1.Text, out sample_pts_num);
+            if (text_result == false)
+                err_str += "input node is not int type\r\n";
+            text_result = int.TryParse(textBox2.Text, out hiddn_nde_num);
+            if (text_result == false)
+                err_str += "hidden node is not int type\r\n";
+            text_result = double.TryParse(textBox3.Text, out learning_rate);
+            if (text_result == false)
+                err_str += "learning rate is not double type\r\n";
+
+            if (err_str.Length > 0)
+            {
+                MessageBox.Show(err_str.TrimEnd('\r', '\n'), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             /* random sample & ground truth data point saaignment */
             Data_flow = new Data_pipe(sample_pts_num);
@@ -215,28 +236,51 @@ namespace Perceptron_MLP
             //////////////////////////////////////////////////////////////////////////////////////////////
             ////////initially dynamic chart update (line & point chart for truth v.s. learned)////////////
             //////////////////////////////////////////////////////////////////////////////////////////////
-            chart2.Series[0].Points.Clear();
-            chart2.Series[1].Points.Clear();
-
-            chart2.ChartAreas[0].AxisY.Maximum = (int)Math.Max((gtrth_pts_norm.Max()*sample_pts_num), (sample_pts_norm.Max()*sample_pts_num)) + 1;
-            chart2.ChartAreas[0].AxisY.Minimum = (int)Math.Min((gtrth_pts_norm.Min()*sample_pts_num), (sample_pts_norm.Min()*sample_pts_num)) - 1;
-
-            chart2.ChartAreas[0].RecalculateAxesScale();
-
-            for (int data_pts_idx = 0; data_pts_idx < sample_pts_num; data_pts_idx++) //plot ground truth data points
-            {
-                chart2.Series[0].Points.AddXY(data_pts_idx, (gtrth_pts_norm[data_pts_idx]*sample_pts_num));
-            }
-
-            for (int data_pts_idx = 0; data_pts_idx < sample_pts_num; data_pts_idx++) //plot input sample data line
-            {
-                chart2.Series[1].Points.AddXY(data_pts_idx, (sample_pts_norm[data_pts_idx]*sample_pts_num));
-            }
+            update_chart_truth_learned();
 
 
             //////////////////////////////////////////////////////////////////////////////////////
             /////////initially dynamic chart update (point chart for weights v.s. biases)/////////
             //////////////////////////////////////////////////////////////////////////////////////
+            update_chart_weights_biases();
+
+
+            //////////////////////////////////////////////
+            ////////initialized related objects///////////
+            //////////////////////////////////////////////
+            chart1.Series[0].Points.Clear();
+
+            iterations = 0;
+
+            timer1.Enabled = true;
+            button1.Enabled = false;
+        }
+
+        // chart 2
+        void update_chart_truth_learned()
+        {
+            chart2.Series[0].Points.Clear();
+            chart2.Series[1].Points.Clear();
+
+            chart2.ChartAreas[0].AxisY.Maximum = (int)Math.Max((gtrth_pts_norm.Max() * sample_pts_num), (sample_pts_norm.Max() * sample_pts_num)) + 1;
+            chart2.ChartAreas[0].AxisY.Minimum = (int)Math.Min((gtrth_pts_norm.Min() * sample_pts_num), (sample_pts_norm.Min() * sample_pts_num)) - 1;
+
+            chart2.ChartAreas[0].RecalculateAxesScale();
+
+            for (int data_pts_idx = 0; data_pts_idx < sample_pts_num; data_pts_idx++) //plot ground truth data points
+            {
+                chart2.Series[0].Points.AddXY(data_pts_idx, (gtrth_pts_norm[data_pts_idx] * sample_pts_num));
+            }
+
+            for (int data_pts_idx = 0; data_pts_idx < sample_pts_num; data_pts_idx++) //plot input sample data line
+            {
+                chart2.Series[1].Points.AddXY(data_pts_idx, (sample_pts_norm[data_pts_idx] * sample_pts_num));
+            }
+        }
+
+        // chart 3 
+        void update_chart_weights_biases()
+        {
             chart3.Series[0].Points.Clear();
             chart3.Series[1].Points.Clear();
 
@@ -267,17 +311,6 @@ namespace Perceptron_MLP
             {
                 chart3.Series[1].Points.AddY(init_biases_opt[col_idx]);
             }
-
-
-            //////////////////////////////////////////////
-            ////////initialized related objects///////////
-            //////////////////////////////////////////////
-            chart1.Series[0].Points.Clear();
-
-            iterations = 0;
-
-            timer1.Enabled = true;
-            button1.Enabled = false;
         }
     }
 }
